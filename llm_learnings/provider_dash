@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Healthcare Provider Gamification Dashboard — Mock</title>
+
+  <!-- Font & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://kit.fontawesome.com/a2d9b9e0f1.js" crossorigin="anonymous"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg: #f7fbfc;
+      --card: #ffffff;
+      --primary: #0f8f9e; /* teal-blue */
+      --primary-2: #1aa3b7;
+      --accent: #22b573; /* green */
+      --muted: #6b7684;
+      --danger:#e74c3c;
+      --warn:#f39c12;
+      --glass: rgba(15,143,158,0.06);
+      --radius: 10px;
+      --shadow: 0 6px 18px rgba(20,30,40,0.06);
+      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#f3fbfc 0%, #f7fbfc 100%);color:#10323b;}
+    .container{
+      max-width:1400px;margin:28px auto;padding:20px;display:grid;grid-template-columns:1fr;gap:16px;
+    }
+
+    /* Top row layout */
+    .grid {
+      display:grid;
+      gap:16px;
+      grid-template-columns: repeat(12, 1fr);
+      align-items:start;
+    }
+
+    .card{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:16px;
+      transition:transform .18s ease, box-shadow .18s ease;
+    }
+    .card:hover{ transform: translateY(-6px); box-shadow: 0 14px 30px rgba(16,50,59,0.08); }
+
+    /* Performance Overview (top) */
+    .performance { grid-column: 1 / span 8; display:flex; gap:12px; align-items:center; padding:18px; }
+    .perf-left{ flex:0 0 320px; display:flex; gap:14px; align-items:center; }
+    .avatar{
+      width:86px;height:86px;border-radius:14px;background:linear-gradient(180deg,var(--primary),var(--primary-2));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;
+      box-shadow: 0 6px 20px rgba(26,163,183,0.12);
+    }
+    .lvl {font-size:14px;color:var(--muted)}
+    .level-title{font-weight:700;font-size:16px;margin-top:2px}
+    .progress-bar-wrap{width:260px;background: #ecf6f6;border-radius:999px;padding:6px;}
+    .progress-bar{height:12px;border-radius:999px;background:linear-gradient(90deg,var(--accent),#39d29a); width:68%; transition:width .8s ease;}
+
+    .perf-stats{ display:flex; gap:12px; flex-wrap:wrap; }
+    .stat{ min-width:140px; padding:8px; border-radius:8px; background: linear-gradient(180deg, rgba(15,143,158,0.03), transparent); }
+
+    .points { font-size:34px; font-weight:800; color:var(--primary-2); }
+    .tiny { font-size:13px; color:var(--muted) }
+
+    /* Right top widgets */
+    .quick { grid-column: 9 / span 4; display:grid; gap:12px; grid-template-columns:repeat(1,1fr); }
+    .metric-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    .metric { padding:14px; border-radius:10px; display:flex; gap:12px; align-items:center; justify-content:center; flex-direction:column; }
+
+    /* Panels further down */
+    .panel { grid-column: 1 / span 8; display:grid; gap:12px; grid-template-columns:repeat(2,1fr); }
+    .side { grid-column: 9 / span 4; display:grid; gap:12px; }
+
+    /* Visit metrics row */
+    .metrics-row { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
+    .metrics-row .card { padding:14px; text-align:center; }
+
+    .badge-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+    /* Leaderboard */
+    .leaderboard-item{ display:flex; align-items:center; gap:8px; padding:10px; border-radius:8px; }
+    .rank { width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:white; }
+
+    /* charts */
+    .chart-card{ height:260px; }
+
+    /* responsive */
+    @media (max-width:1100px){
+      .grid{grid-template-columns:repeat(8,1fr);}
+      .performance{grid-column:1/ -1}
+      .quick{grid-column:1/ -1}
+      .panel{grid-column:1/ -1}
+      .side{grid-column:1/ -1}
+      .metrics-row{grid-template-columns:repeat(2,1fr)}
+    }
+    @media (max-width:640px){
+      .container{ padding:12px; }
+      .metrics-row{ grid-template-columns: repeat(1,1fr); }
+      .metric-grid{ grid-template-columns:repeat(2,1fr); }
+    }
+
+    /* little UI touches */
+    .muted{ color:var(--muted); font-size:13px;}
+    .pill { padding:6px 10px;border-radius:999px; background:var(--glass); font-weight:600; font-size:13px; display:inline-flex; gap:8px; align-items:center;}
+    .small { font-size:12px; color:var(--muted); }
+    .progress-circle { position:relative; display:inline-block; width:84px; height:84px; }
+    .progress-circle svg{ transform: rotate(-90deg); }
+    .flame{ color: #ff8a29; font-size:20px; margin-right:6px;}
+    .ach-badge{ width:54px;height:54px;border-radius:12px; display:flex;align-items:center;justify-content:center;font-weight:700;color:white; box-shadow: 0 6px 18px rgba(0,0,0,0.06);}
+    .challenge{ display:flex; flex-direction:column; gap:8px; padding:14px;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 style="margin:0 0 6px 6px; font-weight:700; color:var(--primary)">In-Home Care — Provider Gamification Dashboard</h2>
+    <div class="grid">
+      <!-- Performance Overview -->
+      <div class="card performance">
+        <div class="perf-left">
+          <div class="avatar">SCN<span style="font-size:12px;opacity:.85;margin-left:6px">Lv7</span></div>
+          <div>
+            <div class="lvl">Senior Care Navigator — <span class="small muted">Level 7</span></div>
+            <div class="level-title">Progress to Level 8</div>
+            <div style="height:8px"></div>
+            <div class="progress-bar-wrap" aria-hidden>
+              <div class="progress-bar" id="levelProgress"></div>
+            </div>
+
+            <div style="margin-top:12px;">
+              <div style="display:flex;gap:12px;align-items:center">
+                <div>
+                  <div class="points" id="pointsVal">12,480</div>
+                  <div class="tiny muted">+420 this week • +1,320 this month</div>
+                </div>
+                <div style="margin-left:14px;">
+                  <div class="pill"><i class="fa-solid fa-fire flame"></i><strong id="streakDays">6</strong> day streak</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div class="muted">This Week's Progress</div>
+            <div class="small muted">Goal: 25 visits</div>
+          </div>
+
+          <div style="display:flex;gap:14px;align-items:center">
+            <div class="progress-circle" title="Visit Goal completion">
+              <svg width="84" height="84">
+                <circle cx="42" cy="42" r="36" stroke="#e9f6f6" stroke-width="12" fill="none"></circle>
+                <circle cx="42" cy="42" r="36" stroke="url(#g1)" stroke-width="12" stroke-linecap="round" fill="none" stroke-dasharray="226" stroke-dashoffset="68" id="visitCircle"></circle>
+                <defs>
+                  <linearGradient id="g1"><stop offset="0" stop-color="#1aa3b7"/><stop offset="1" stop-color="#22b573"/></linearGradient>
+                </defs>
+              </svg>
+              <div style="position:absolute;left:0;top:0;width:84px;height:84px;display:flex;align-items:center;justify-content:center;flex-direction:column">
+                <div style="font-weight:800;font-size:18px" id="visitPct">70%</div>
+                <div class="small muted">17/25</div>
+              </div>
+            </div>
+
+            <div style="flex:1">
+              <div style="display:flex;gap:12px;">
+                <div class="stat">
+                  <div class="small muted">Visit Success Rate</div>
+                  <div style="font-weight:700;font-size:18px;color:var(--accent)">95% <span class="small" style="color:var(--muted)">▲ 2%</span></div>
+                </div>
+                <div class="stat">
+                  <div class="small muted">Avg Visit Duration</div>
+                  <div style="font-weight:700;font-size:18px">42m <span class="small muted">/visit</span></div>
+                </div>
+                <div class="stat">
+                  <div class="small muted">Avg Travel Time</div>
+                  <div style="font-weight:700;font-size:18px">18m <span class="small muted">/trip</span></div>
+                </div>
+              </div>
+
+              <div style="margin-top:12px;">
+                <div class="muted">Recent achievements <span class="small muted">•</span> Notification: <span class="pill"><i class="fa-solid fa-bell"></i> 2</span></div>
+                <div style="margin-top:10px" class="badge-row" id="recentBadges">
+                  <!-- badges injected by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Metrics (right top) -->
+      <div class="card quick">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-weight:700">Summary</div>
+          <div class="small muted">Desktop / Tablet</div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="card metric" style="background:linear-gradient(180deg,#eefaf9,white)">
+            <div class="small muted">Completed</div>
+            <div style="font-weight:800;font-size:20px;color:var(--accent)"><i class="fa-solid fa-check-circle" style="margin-right:8px"></i> 112</div>
+            <div class="small muted">this week</div>
+          </div>
+          <div class="card metric" style="background:linear-gradient(180deg,#fff9ef,white)">
+            <div class="small muted">Missed</div>
+            <div style="font-weight:800;font-size:20px;color:var(--warn)"><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px"></i> 3</div>
+            <div class="small muted">follow-up pending</div>
+          </div>
+          <div class="card metric" style="background:linear-gradient(180deg,#fff6f6,white)">
+            <div class="small muted">Canceled</div>
+            <div style="font-weight:800;font-size:20px;color:var(--danger)"><i class="fa-solid fa-xmark" style="margin-right:8px"></i> 2</div>
+            <div class="small muted">rebook recommended</div>
+          </div>
+          <div class="card metric">
+            <div class="small muted">Active Patients</div>
+            <div style="font-weight:800;font-size:20px"><i class="fa-solid fa-users" style="margin-right:8px"></i> 248</div>
+            <div class="small muted">caseload</div>
+          </div>
+          <div class="card metric">
+            <div class="small muted">Satisfaction</div>
+            <div style="font-weight:800;font-size:20px;color:#ffb400"><i class="fa-solid fa-star" style="margin-right:8px"></i> 4.8 / 5</div>
+            <div class="small muted">from 126 reviews</div>
+          </div>
+          <div class="card metric">
+            <div class="small muted">Documentation</div>
+            <div style="font-weight:800;font-size:20px;color:var(--primary)"><i class="fa-solid fa-clipboard-check" style="margin-right:8px"></i> 98%</div>
+            <div class="small muted">completion</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visit Metrics Panel -->
+      <div class="card" style="grid-column:1 / span 12;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-weight:700">Visit Metrics</div>
+          <div class="small muted">Last 7 days</div>
+        </div>
+
+        <div class="metrics-row">
+          <div class="card">
+            <div class="small muted">Completed Visits</div>
+            <div style="font-weight:800;font-size:20px;color:var(--accent)"><i class="fa-solid fa-check" style="margin-right:8px"></i> 112</div>
+          </div>
+          <div class="card">
+            <div class="small muted">Missed Visits</div>
+            <div style="font-weight:800;font-size:20px;color:var(--warn)"><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px"></i> 3</div>
+          </div>
+          <div class="card">
+            <div class="small muted">Canceled Visits</div>
+            <div style="font-weight:800;font-size:20px;color:var(--danger)"><i class="fa-solid fa-xmark" style="margin-right:8px"></i> 2</div>
+          </div>
+          <div class="card">
+            <div class="small muted">Rescheduled</div>
+            <div style="font-weight:800;font-size:20px;color:var(--primary)"><i class="fa-solid fa-clock-rotate-left" style="margin-right:8px"></i> 5</div>
+          </div>
+          <div class="card">
+            <div class="small muted">Visit Success Rate</div>
+            <div style="font-weight:800;font-size:20px;color:var(--accent)">95% <span class="small muted">▲</span></div>
+          </div>
+          <div class="card">
+            <div class="small muted">Avg Visit Duration</div>
+            <div style="font-weight:800;font-size:20px">42m</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main left panels -->
+      <div class="panel card">
+        <!-- Patient & Quality metrics -->
+        <div style="padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:700">Patient & Quality</div>
+            <div class="small muted">Updated 2h ago</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+            <div style="padding:10px;border-radius:8px;background:#f6fbfb">
+              <div class="small muted">Patient Diversity</div>
+              <div style="height:12px"></div>
+              <div style="background:#e8f7f6;border-radius:999px;padding:6px"><div style="width:62%;height:12px;border-radius:999px;background:linear-gradient(90deg,#1aa3b7,#22b573)"></div></div>
+              <div class="small muted" style="margin-top:8px">Varied age & conditions</div>
+            </div>
+
+            <div style="padding:10px;border-radius:8px;background:#fff">
+              <div class="small muted">Clinical Questions Completed</div>
+              <div style="font-weight:800;font-size:18px;margin-top:8px">1,247 / 1,380</div>
+              <div class="small muted">+90 in last 7 days</div>
+            </div>
+
+            <div style="padding:10px;border-radius:8px;background:#fff">
+              <div class="small muted">Documentation Completion</div>
+              <div style="font-weight:800;font-size:18px;margin-top:8px">98%</div>
+            </div>
+
+            <div style="padding:10px;border-radius:8px;background:#fff">
+              <div class="small muted">Patient Adherence</div>
+              <div style="font-weight:800;font-size:18px;margin-top:8px">82%</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <canvas id="outcomesChart" class="chart-card"></canvas>
+          </div>
+        </div>
+
+        <!-- Geographic & Efficiency -->
+        <div style="padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:700">Geographic & Efficiency</div>
+            <div class="small muted">This month</div>
+          </div>
+
+          <div style="display:flex;gap:12px;margin-top:12px">
+            <div style="flex:1">
+              <div class="small muted">Miles Traveled</div>
+              <div style="font-weight:800;font-size:20px;margin-top:6px"><i class="fa-solid fa-car" style="margin-right:8px"></i> 256 mi</div>
+
+              <div style="margin-top:12px">
+                <div class="small muted">Primary Service Zip Codes</div>
+                <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+                  <div class="pill">11215</div><div class="pill">11201</div><div class="pill">11235</div><div class="pill">11385</div><div class="pill">11432</div>
+                </div>
+              </div>
+
+              <div style="margin-top:12px">
+                <div class="small muted">Average Travel Time</div>
+                <div style="font-weight:700">18m</div>
+              </div>
+            </div>
+
+            <div style="flex:1">
+              <div class="small muted">Geographic Coverage</div>
+              <div style="height:140px;background:linear-gradient(180deg,#f4f9f9,#fff);border-radius:8px;margin-top:8px;display:flex;align-items:center;justify-content:center;color:var(--muted)">
+                [Heat map placeholder]
+              </div>
+
+              <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div class="small muted">Fuel Efficiency Score</div>
+                  <div style="font-weight:800">A • 92</div>
+                </div>
+                <div>
+                  <button style="padding:8px 12px;border-radius:8px;border:none;background:var(--primary);color:white;font-weight:700">View Routes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Right side: Financial, Achievements, Demographics -->
+      <div class="side">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:700">Financial & Productivity</div>
+            <div class="small muted">Monthly</div>
+          </div>
+
+          <div style="margin-top:12px;display:grid;gap:8px">
+            <div style="display:flex;justify-content:space-between"><div class="small muted">Revenue Generated</div><div style="font-weight:800">$14,200</div></div>
+            <div style="display:flex;justify-content:space-between"><div class="small muted">Cost Per Visit</div><div style="font-weight:800">$33</div></div>
+            <div style="display:flex;justify-content:space-between"><div class="small muted">Visits Per Day</div><div style="font-weight:800">5.6</div></div>
+            <div style="display:flex;justify-content:space-between"><div class="small muted">Peak Hours</div><div style="font-weight:800">8:00–11:00</div></div>
+            <div style="margin-top:10px">
+              <canvas id="insChart" style="height:140px"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:700">Achievements & Challenges</div>
+            <div class="small muted">Gamification</div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap" id="achList">
+            <!-- badges injected -->
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="small muted">Current Challenges</div>
+            <div class="challenge" style="margin-top:8px">
+              <div style="display:flex;justify-content:space-between"><div>Visit 25 patients this week</div><div class="small muted">17/25</div></div>
+              <div style="height:8px;background:#eef7f6;border-radius:999px"><div style="width:68%;height:8px;border-radius:999px;background:linear-gradient(90deg,#1aa3b7,#22b573)"></div></div>
+            </div>
+
+            <div class="challenge">
+              <div style="display:flex;justify-content:space-between"><div>Maintain 95%+ satisfaction</div><div class="small muted">95%</div></div>
+              <div style="height:8px;background:#fff7eb;border-radius:999px"><div style="width:95%;height:8px;border-radius:999px;background:linear-gradient(90deg,#ffb400,#ffcf5a)"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:700">Demographics & Outcomes</div>
+            <div class="small muted">Overview</div>
+          </div>
+
+          <div style="margin-top:12px">
+            <canvas id="ageChart" style="height:160px"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:8px">Leaderboard</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="leaderboard-item"><div class="rank" style="background:linear-gradient(90deg,#ffd166,#ffb400)">1</div><div style="flex:1">Alex M. <div class="small muted">125 visits • 4.9★</div></div><div style="font-weight:700">12,900</div></div>
+            <div class="leaderboard-item"><div class="rank" style="background:linear-gradient(90deg,#c1e7ff,#1aa3b7)">2</div><div style="flex:1">You <div class="small muted">112 visits • 4.8★</div></div><div style="font-weight:700">12,480</div></div>
+            <div class="leaderboard-item"><div class="rank" style="background:linear-gradient(90deg,#f7d1ff,#d46bd1)">3</div><div style="flex:1">Priya S. <div class="small muted">108 visits • 4.7★</div></div><div style="font-weight:700">12,100</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // sample dynamic values
+    document.getElementById('levelProgress').style.width = '68%';
+    document.getElementById('pointsVal').innerText = '12,480';
+    document.getElementById('streakDays').innerText = '6';
+
+    // visit circle percentage (stroke-dashoffset math)
+    const pct = 68;
+    const circumference = 2 * Math.PI * 36; // r=36
+    const offset = circumference * (1 - pct/100);
+    document.getElementById('visitCircle').style.strokeDasharray = circumference;
+    document.getElementById('visitCircle').style.strokeDashoffset = offset;
+    document.getElementById('visitPct').innerText = pct + '%';
+    document.getElementById('visitPct').style.transition = 'all .6s ease';
+
+    // inject badges
+    const badges = [
+      {title:'Distance Champion', sub:'100+ miles this week', color:'#4fb3ff',emoji:'🚗'},
+      {title:'Patient Advocate', sub:'5-star streak', color:'#39d29a',emoji:'💙'},
+      {title:'Early Bird', sub:'First visit before 8 AM', color:'#ffd166',emoji:'🌅'},
+      {title:'Complete Assessor', sub:'100% doc rate', color:'#c1e7ff',emoji:'📝'},
+    ];
+    const badgeContainer = document.getElementById('recentBadges');
+    const achList = document.getElementById('achList');
+
+    badges.forEach(b=>{
+      const el = document.createElement('div');
+      el.className = 'ach-badge';
+      el.style.background = b.color;
+      el.title = b.title + ' • ' + b.sub;
+      el.innerHTML = `<div style="font-size:20px">${b.emoji}</div>`;
+      badgeContainer.appendChild(el);
+
+      // add to achievements
+      const a = document.createElement('div');
+      a.style.display='flex'; a.style.gap='8px'; a.style.alignItems='center';
+      a.innerHTML = `<div class="ach-badge" style="background:${b.color}">${b.emoji}</div><div><div style="font-weight:700">${b.title}</div><div class="small muted">${b.sub}</div></div>`;
+      achList.appendChild(a);
+    });
+
+    // Chart.js charts
+    const outcomesCtx = document.getElementById('outcomesChart').getContext('2d');
+    new Chart(outcomesCtx, {
+      type:'line',
+      data:{
+        labels:['6w ago','5w','4w','3w','2w','Last week','This week'],
+        datasets:[{
+          label:'Health Outcome Score',
+          data:[68,70,72,74,76,78,80],
+          fill:true,
+          tension:0.36,
+          borderWidth:2,
+          borderColor:'#1aa3b7',
+          backgroundColor:'rgba(26,163,183,0.12)',
+          pointRadius:3
+        }]
+      },
+      options:{
+        plugins:{legend:{display:false}},
+        scales:{y:{beginAtZero:false}}
+      }
+    });
+
+    const insCtx = document.getElementById('insChart').getContext('2d');
+    new Chart(insCtx, {
+      type:'pie',
+      data:{
+        labels:['Medicare','Medicaid','Private'],
+        datasets:[{data:[48,30,22],backgroundColor:['#1aa3b7','#22b573','#ffd166']}]
+      },
+      options:{plugins:{legend:{position:'bottom'}}}
+    });
+
+    const ageCtx = document.getElementById('ageChart').getContext('2d');
+    new Chart(ageCtx,{
+      type:'bar',
+      data:{
+        labels:['18-44','45-64','65-74','75-84','85+'],
+        datasets:[{label:'Patients', data:[12,28,60,78,70], borderRadius:6, backgroundColor:'#c1e7ff'}]
+      },
+      options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}
+    });
+
+    // small accessibility: keyboard focus style
+    document.querySelectorAll('.card').forEach(c=>c.setAttribute('tabindex','0'));
+
+  </script>
+</body>
+</html>
